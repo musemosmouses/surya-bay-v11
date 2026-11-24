@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Surya Bay — Coastal Open World</title>
+<style>
+  html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#0b1622;font-family:'Segoe UI',Arial,sans-serif;color:#fff}
+  #c{position:fixed;inset:0;display:block}
+  .panel{position:fixed;background:rgba(8,18,30,.78);border:1px solid rgba(120,200,255,.35);border-radius:10px;padding:8px 10px;backdrop-filter:blur(3px)}
+  #hud-top{top:10px;left:10px;min-width:210px}
+  #hud-top .row{display:flex;justify-content:space-between;gap:14px;font-size:13px;line-height:1.5}
+  #stars{color:#ffd23f;font-size:18px;letter-spacing:2px}
+  #money{color:#7dff9b;font-weight:700;font-size:17px}
+  #rank{color:#ffb347;font-weight:700}
+  #barwrap{height:8px;background:#123;border-radius:4px;overflow:hidden;margin-top:3px}
+  #hpbar{height:100%;background:linear-gradient(90deg,#37e08b,#a5ff6b);width:100%}
+  #armorbar{height:100%;background:#58b7ff;width:0%}
+  #dispatch{top:10px;right:10px;width:268px;font-size:12px;line-height:1.45}
+  #dispatch h3{margin:0 0 4px;font-size:12px;letter-spacing:2px;color:#8fd4ff}
+  #dispatch .unit{border-top:1px solid rgba(140,210,255,.18);padding:3px 0}
+  #dispatch .marine{color:#7fe3ff}
+  #dispatch .air{color:#ffd23f}
+  #mission{top:110px;left:10px;max-width:330px;font-size:13px}
+  #mission b{color:#ffd23f}
+  #mission .obj{color:#cfeaff}
+  #dialog{left:50%;bottom:118px;transform:translateX(-50%);width:560px;max-width:92vw;display:none}
+  #dialog .who{color:#ffb347;font-weight:700}
+  #dialog .face{float:left;font-size:34px;margin-right:10px}
+  #dialog .line{font-size:14px;line-height:1.45}
+  #radio{left:10px;bottom:10px;font-size:12px;color:#ffe9a8;max-width:420px}
+  #weapons{position:fixed;right:10px;bottom:10px;display:flex;gap:6px}
+  #weapons .slot{width:44px;text-align:center;padding:5px 2px;border-radius:8px;background:rgba(8,18,30,.78);border:1px solid rgba(120,200,255,.3);font-size:11px}
+  #weapons .slot.on{border-color:#ffd23f;background:rgba(80,60,0,.7)}
+  #weapons .slot.locked{opacity:.45}
+  #crew{position:fixed;right:10px;bottom:76px;display:flex;gap:6px}
+  #crew .card{width:104px;padding:6px;border-radius:8px;background:rgba(8,18,30,.8);border:1px solid rgba(255,180,80,.4);font-size:11px;line-height:1.35}
+  #crew .card b{color:#ffb347}
+  #speed{right:400px;bottom:10px;text-align:right;font-size:13px}
+  #speed b{font-size:22px}
+  #minimap{position:fixed;right:10px;bottom:150px;width:190px;height:190px;border-radius:50%;border:3px solid rgba(140,210,255,.55);overflow:hidden;background:#0a2033}
+  #minimap canvas{width:100%;height:100%}
+  #weather{top:10px;left:50%;transform:translateX(-50%);font-size:12px;text-align:center;padding:5px 14px}
+  #toast{left:50%;top:64px;transform:translateX(-50%);font-size:15px;font-weight:700;color:#ffe27a;display:none}
+  #menu{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(180deg,rgba(4,20,40,.88),rgba(20,60,90,.82));z-index:20;text-align:center}
+  #menu h1{font-size:56px;margin:0;color:#ffd23f;text-shadow:0 4px 0 #b3541e,0 8px 24px #000;letter-spacing:3px}
+  #menu p{color:#cfeaff;max-width:640px;line-height:1.6}
+  #menu button{font-size:19px;padding:13px 34px;border-radius:10px;border:0;background:#ffd23f;color:#231400;font-weight:800;cursor:pointer;margin-top:8px}
+  #menu .keys{font-size:13px;color:#9fc6e8;margin-top:14px;line-height:1.7}
+  #pause{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:15}
+  #pause .box{background:#0b1c2e;border:1px solid #58b7ff;border-radius:12px;padding:26px 34px;text-align:center}
+  #pause button{font-size:16px;padding:9px 22px;margin:6px;border-radius:8px;border:0;background:#58b7ff;color:#04121f;font-weight:700;cursor:pointer}
+  #hint{position:fixed;left:50%;bottom:8px;transform:translateX(-50%);font-size:11px;color:#8fb8d8;opacity:.85}
+  #floodwarn{position:fixed;left:50%;top:110px;transform:translateX(-50%);color:#7fe3ff;font-weight:700;display:none}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud-top" class="panel" style="display:none">
+  <div class="row"><span id="stars">☆☆☆☆☆</span><span id="money">$0</span></div>
+  <div class="row"><span>HP</span><span id="rank">COURIER</span></div>
+  <div id="barwrap"><div id="hpbar"></div></div>
+  <div id="barwrap"><div id="armorbar"></div></div>
+  <div class="row"><span id="wname">PISTOL</span><span id="ammo">∞</span></div>
+</div>
+<div id="dispatch" class="panel" style="display:none"><h3>📡 SURYA DISPATCH</h3><div id="units"></div></div>
+<div id="mission" class="panel" style="display:none"><b id="mtitle">FREE ROAM</b><div class="obj" id="mobj">Explore Surya Bay. Press E near a car or boat.</div><div id="mcount" style="color:#8fd4ff;font-size:12px"></div></div>
+<div id="weather" class="panel" style="display:none"><span id="wtext">☀ CLEAR</span> · <span id="ttext">TIDE LOW</span></div>
+<div id="toast" class="panel"></div>
+<div id="floodwarn">🌊 HIGH TIDE — BEACH STRIP FLOODED</div>
+<div id="dialog" class="panel"><span class="face" id="dface">🧑</span><span class="who" id="dwho">MARA</span><div class="line" id="dline"></div></div>
+<div id="radio" class="panel" style="display:none">📻 <span id="radioline"></span></div>
+<div id="minimap" style="display:none"><canvas id="mm" width="190" height="190"></canvas></div>
+<div id="speed" class="panel" style="display:none"><b id="spd">0</b> km/h<br><span id="vcond">ON FOOT</span></div>
+<div id="crew" style="display:none"></div>
+<div id="weapons" style="display:none"></div>
+<div id="menu">
+  <h1>SURYA BAY</h1>
+  <p>An original coastal open world. Walk the streets, drive the city,
+  take a boat out of the harbor — and stay ahead of Surya PD, on land
+  <i>and</i> on the water. Eight story missions, street races, weather
+  and tides that change how everything drives.</p>
+  <button id="playbtn">▶ START ENGINE</button>
+  <div class="keys">WASD move · Mouse camera · SHIFT sprint · E enter/exit car &amp; boat<br>
+  CLICK fire · Q swap weapon · F punch · 1–7 weapons · R radio · P pause · M mute</div>
+</div>
+<div id="pause"><div class="box"><h2>PAUSED</h2><p id="pausestat"></p>
+  <button id="resumebtn">RESUME</button><button id="savebtn">SAVE</button><button id="menubtn">QUIT TO MENU</button>
+</div></div>
+<div id="hint">Surya Bay v11 · seeded world · all audio synthesized</div>
+<script src="vendor/three.min.js"></script>
+<script src="src/core.js"></script>
+<script src="src/audio.js"></script>
+<script src="src/city.js"></script>
+<script src="src/vehicles.js"></script>
+<script src="src/world.js"></script>
+<script src="src/player.js"></script>
+<script src="src/police.js"></script>
+<script src="src/weather.js"></script>
+<script src="src/missions.js"></script>
+<script src="src/hud.js"></script>
+<script src="src/boot.js"></script>
+</body>
+</html>
